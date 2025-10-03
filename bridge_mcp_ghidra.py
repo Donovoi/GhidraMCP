@@ -49,6 +49,7 @@ def safe_post(endpoint: str, data: dict | str) -> str:
     try:
         url = urljoin(ghidra_server_url, endpoint)
         if isinstance(data, dict):
+            # BSim queries might be a bit slower, using configurable timeout
             response = requests.post(url, data=data, timeout=ghidra_request_timeout)
         else:
             response = requests.post(url, data=data.encode("utf-8"), timeout=ghidra_request_timeout)
@@ -289,6 +290,90 @@ def list_strings(offset: int = 0, limit: int = 2000, filter: str = None) -> list
     if filter:
         params["filter"] = filter
     return safe_get("strings", params)
+
+@mcp.tool()
+def bsim_select_database(database_path: str) -> str:
+    """
+    Select and connect to a BSim database for function similarity matching.
+
+    Args:
+        database_path: Path to BSim database file (e.g., "/path/to/database.bsim")
+                      or URL (e.g., "postgresql://host:port/dbname")
+
+    Returns:
+        Connection status and database information
+    """
+    return safe_post("bsim/select_database", {"database_path": database_path})
+
+@mcp.tool()
+def bsim_query_function(
+    function_address: str,
+    max_matches: int = 10,
+    similarity_threshold: float = 0.7,
+    confidence_threshold: float = 0.0,
+) -> str:
+    """
+    Query a single function against the BSim database to find similar functions.
+
+    Args:
+        function_address: Address of the function to query (e.g., "0x401000")
+        max_matches: Maximum number of matches to return (default: 10)
+        similarity_threshold: Minimum similarity score 0.0-1.0 (default: 0.7)
+        confidence_threshold: Minimum confidence score (default: 0.0)
+
+    Returns:
+        List of matching functions with similarity scores and metadata
+    """
+    return safe_post("bsim/query_function", {
+        "function_address": function_address,
+        "max_matches": str(max_matches),
+        "similarity_threshold": str(similarity_threshold),
+        "confidence_threshold": str(confidence_threshold),
+    })
+
+@mcp.tool()
+def bsim_query_all_functions(
+    max_matches_per_function: int = 5,
+    similarity_threshold: float = 0.7,
+    confidence_threshold: float = 0.0,
+) -> str:
+    """
+    Query all functions in the current program against the BSim database.
+    Returns an overview of matches for all functions.
+
+    Args:
+        max_matches_per_function: Max matches per function (default: 5)
+        similarity_threshold: Minimum similarity score 0.0-1.0 (default: 0.7)
+        confidence_threshold: Minimum confidence score (default: 0.0)
+
+    Returns:
+        Summary and detailed results for all matching functions
+    """
+    return safe_post("bsim/query_all_functions", {
+        "max_matches_per_function": str(max_matches_per_function),
+        "similarity_threshold": str(similarity_threshold),
+        "confidence_threshold": str(confidence_threshold),
+    })
+
+@mcp.tool()
+def bsim_disconnect() -> str:
+    """
+    Disconnect from the current BSim database.
+
+    Returns:
+        Disconnection status message
+    """
+    return safe_post("bsim/disconnect", {})
+
+@mcp.tool()
+def bsim_status() -> str:
+    """
+    Get the current BSim database connection status.
+
+    Returns:
+        Current connection status and database path if connected
+    """
+    return "\n".join(safe_get("bsim/status"))
 
 def main():
     parser = argparse.ArgumentParser(description="MCP server for Ghidra")
