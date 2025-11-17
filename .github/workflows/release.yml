@@ -11,6 +11,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write
+    
     env:
       GHIDRA_VERSION: 11.4.2
       GHIDRA_DATE: 20250826
