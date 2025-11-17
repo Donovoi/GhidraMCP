@@ -52,4 +52,7 @@ replay_pid*
 # Third party JAR files from Ghidra
 lib/*.jar
 
+# Release artifacts
+/release/
+
 __pycache__/
